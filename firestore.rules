@@ -1,0 +1,152 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // =========================================================================
+    // HELPER FUNCTIONS & ROLE CHECKING
+    // =========================================================================
+
+    // Check if the user is authenticated via Firebase Auth (Google Sign-In)
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Check if the current user is an authorized Admin:
+    // 1. Google account UID or email exists in the pre-approved adminAllowlist collection
+    // 2. Or token claims include admin: true
+    function isAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.admin == true ||
+        exists(/databases/$(database)/documents/adminAllowlist/$(request.auth.uid)) ||
+        (request.auth.token.email != null && exists(/databases/$(database)/documents/adminAllowlist/$(request.auth.token.email)))
+      );
+    }
+
+    // Check if the authenticated user is the owner of this document
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // =========================================================================
+    // 1. ADMIN ALLOWLIST COLLECTION
+    // =========================================================================
+    // Stores pre-approved .admin usernames (e.g. office1.admin) and authorized emails.
+    // Authenticated users can read their allowlist entry to verify admin status.
+    // Only super-admins can write or modify the allowlist.
+    match /adminAllowlist/{adminId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // =========================================================================
+    // 2. APP SETTINGS COLLECTION
+    // =========================================================================
+    // Stores institutional holding period (30-60 days, default 45), contact info.
+    match /appSettings/{settingId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // =========================================================================
+    // 3. USERS (STUDENT PROFILES) COLLECTION
+    // =========================================================================
+    // Privacy Rule:
+    // - Students can ONLY read and write their OWN profile.
+    // - Only admins can read ALL student profiles (e.g., student search, contact lookup).
+    // - Students cannot view other students' profiles.
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // =========================================================================
+    // 4. ITEMS (FOUND ARTICLES LOGGED AT INTAKE) COLLECTION
+    // =========================================================================
+    // Rules:
+    // - Admins have full read/write access.
+    // - Students can read items ONLY IF:
+    //   1. The item status is 'Unclaimed' (or public)
+    //   2. The item is NOT flagged as sensitive (isSensitive != true)
+    // - Sensitive items (ID cards, ATM cards, certificates) are strictly admin-only.
+    // - Students can never create or modify logged found items directly (intake is admin-only).
+    match /items/{itemId} {
+      allow read: if isAuthenticated() && (
+        isAdmin() ||
+        (resource.data.status == 'Unclaimed' && resource.data.isSensitive != true)
+      );
+      allow create, update, delete: if isAdmin();
+    }
+
+    // =========================================================================
+    // 5. LOST REPORTS (SUBMITTED BY STUDENTS) COLLECTION
+    // =========================================================================
+    // Rules:
+    // - Students can create reports of items they lost.
+    // - Students can view and manage their own lost reports.
+    // - Admins can read all lost reports for auto-matching and intake investigation.
+    match /lostReports/{reportId} {
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.studentUid == request.auth.uid);
+      allow create: if isAuthenticated() && request.resource.data.studentUid == request.auth.uid;
+      allow update: if isAdmin() || (isAuthenticated() && resource.data.studentUid == request.auth.uid);
+      allow delete: if isAdmin() || (isAuthenticated() && resource.data.studentUid == request.auth.uid);
+    }
+
+    // =========================================================================
+    // 6. CLAIMS (OWNERSHIP VERIFICATION CLAIMS) COLLECTION
+    // =========================================================================
+    // Rules:
+    // - Students can create a claim on an unclaimed item by submitting verification answers.
+    // - Students can read their own claims and check status (Requested -> Approved -> Ready for Pickup -> Collected).
+    // - Admins can read all claims to review verification answers and advance statuses.
+    // - Only admins can update the status of a claim.
+    // - Claims cannot be deleted to preserve audit trails.
+    match /claims/{claimId} {
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.studentUid == request.auth.uid);
+      allow create: if isAuthenticated() && request.resource.data.studentUid == request.auth.uid;
+      allow update: if isAdmin();
+      allow delete: if false; // non-deletable audit trail
+    }
+
+    // =========================================================================
+    // 7. HANDOVER LOGS (PERMANENT RELEASE AUDIT) COLLECTION
+    // =========================================================================
+    // Rules:
+    // - Immutable & Append-Only!
+    // - Admins can read the handover logs.
+    // - Only admins can create new handover logs upon physical handover verification.
+    // - Update and delete operations are STRICTLY DENIED for everyone.
+    match /handoverLogs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin() &&
+                    request.resource.data.studentRollNo != null &&
+                    request.resource.data.releasedBy != null &&
+                    request.resource.data.idVerified == true;
+      allow update: if false; // Immutable: no edits allowed
+      allow delete: if false; // Immutable: permanent records
+    }
+
+    // =========================================================================
+    // 8. NOTIFICATIONS COLLECTION
+    // =========================================================================
+    // Rules:
+    // - Students can read notifications addressed to their UID or broadcast digests.
+    // - Students can mark their own notifications as read.
+    // - Admins and Cloud Functions can write notifications.
+    match /notifications/{notifId} {
+      allow read: if isAuthenticated() && (
+        resource.data.recipientUid == request.auth.uid ||
+        resource.data.recipientUid == 'all' ||
+        resource.data.isBroadcast == true ||
+        isAdmin()
+      );
+      allow create: if isAdmin();
+      allow update: if isAuthenticated() && (
+        resource.data.recipientUid == request.auth.uid ||
+        isAdmin()
+      );
+      allow delete: if isAdmin();
+    }
+  }
+}

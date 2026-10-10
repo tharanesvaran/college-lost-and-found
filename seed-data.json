@@ -1,0 +1,357 @@
+{
+  "adminAllowlist": {
+    "office1.admin": {
+      "username": "office1.admin",
+      "email": "admin@mcet.in",
+      "name": "Prof. S. Rangarajan",
+      "designation": "Administrative Officer & Estate Incharge",
+      "office": "Admin Block, Ground Floor, Room 102",
+      "phone": "+91 4259 236030",
+      "active": true
+    },
+    "estate.admin": {
+      "username": "estate.admin",
+      "email": "estate@mcet.in",
+      "name": "K. Balakrishnan",
+      "designation": "Campus Supervisor & Property Custodian",
+      "office": "Estate Office, Near Main Gate",
+      "phone": "+91 4259 236045",
+      "active": true
+    }
+  },
+  "appSettings": {
+    "holdingPeriodDays": 45,
+    "minHoldingDays": 30,
+    "maxHoldingDays": 60,
+    "collegeName": "Dr. Mahalingam College of Engineering and Technology (MCET)",
+    "campusLocation": "Udumalai Road, Pollachi, Tamil Nadu 642003",
+    "adminOfficeHours": "9:00 AM - 4:30 PM (Mon - Sat)",
+    "adminContactPhone": "+91 4259 236030",
+    "adminContactEmail": "lostandfound@mcet.in",
+    "lastWeeklyDigestDate": "2026-10-06T09:00:00.000Z"
+  },
+  "users": {
+    "std_priya": {
+      "uid": "std_priya",
+      "role": "student",
+      "email": "priya.s@mcet.in",
+      "fullName": "Priya S",
+      "rollNumber": "727622BCS042",
+      "phone": "+91 98765 43210",
+      "yearOfStudy": "3rd Year",
+      "department": "Computer Science & Engineering (CSE)",
+      "profileComplete": true,
+      "createdAt": "2026-08-15T10:00:00.000Z"
+    },
+    "std_karthik": {
+      "uid": "std_karthik",
+      "role": "student",
+      "email": "karthik.r@mcet.in",
+      "fullName": "Karthik R",
+      "rollNumber": "727621BME019",
+      "phone": "+91 94432 11002",
+      "yearOfStudy": "4th Year",
+      "department": "Mechanical Engineering",
+      "profileComplete": true,
+      "createdAt": "2026-08-20T11:30:00.000Z"
+    },
+    "std_ananya": {
+      "uid": "std_ananya",
+      "role": "student",
+      "email": "ananya.m@mcet.in",
+      "fullName": "Ananya M",
+      "rollNumber": "727623BEC015",
+      "phone": "+91 98941 77889",
+      "yearOfStudy": "2nd Year",
+      "department": "Electronics & Communication Engineering (ECE)",
+      "profileComplete": true,
+      "createdAt": "2026-09-01T09:15:00.000Z"
+    },
+    "std_sanjay": {
+      "uid": "std_sanjay",
+      "role": "student",
+      "email": "sanjay.v@mcet.in",
+      "fullName": "Sanjay V",
+      "rollNumber": "727624BAI055",
+      "phone": "+91 97890 22341",
+      "yearOfStudy": "1st Year",
+      "department": "Artificial Intelligence & Data Science (AI&DS)",
+      "profileComplete": true,
+      "createdAt": "2026-09-10T14:20:00.000Z"
+    }
+  },
+  "items": [
+    {
+      "id": "MCET-FND-101",
+      "title": "HP Blue Laptop Charger (65W USB-C)",
+      "category": "Electronics",
+      "description": "Found on the table in Block B 2nd floor laboratory corridor. Blue cable strap attached.",
+      "privateNotes": "HP Original 65W charger, model TPN-DA16. Has black electrical insulation tape wrapped near barrel connector. Serial: 854117-001.",
+      "isSensitive": false,
+      "locationName": "Block B, 2nd Floor Corridor",
+      "coordinates": { "lat": 10.6612, "lng": 77.0103, "zone": "Block B" },
+      "dateFound": "2026-09-28",
+      "finderRollNo": "727623BEC015",
+      "finderName": "Ananya M",
+      "storageNumber": "Shelf A-4",
+      "isLockedCabinet": true,
+      "lockedCabinetNo": "Locked Cabinet #1",
+      "verificationQuestions": [
+        "What distinctive repair or tape is present on the power cable?",
+        "What brand/model is printed on the power adapter body?"
+      ],
+      "verificationAnswers": [
+        "Black electrical insulation tape wrapped near barrel connector",
+        "HP Original 65W TPN-DA16"
+      ],
+      "status": "Unclaimed",
+      "createdAt": "2026-09-28T14:20:00.000Z"
+    },
+    {
+      "id": "MCET-FND-102",
+      "title": "College Bus Pass & Indian Bank ATM Card",
+      "category": "ID Cards & Documents",
+      "description": "Found near the Indian Bank branch ATM counter on campus.",
+      "privateNotes": "Indian Bank RuPay Debit Card ending in 4092, belonging to Dinesh Kumar P (Mech 3rd Yr, Roll: 727622BME034). Bus Route No. 12 (Pollachi Town).",
+      "isSensitive": true,
+      "sensitiveStudentRoll": "727622BME034",
+      "sensitiveStudentName": "Dinesh Kumar P",
+      "locationName": "Indian Bank & ATM Branch, MCET Campus",
+      "coordinates": { "lat": 10.6618, "lng": 77.0102, "zone": "Indian Bank Campus Branch" },
+      "dateFound": "2026-10-04",
+      "finderRollNo": "727624BAI055",
+      "finderName": "Sanjay V",
+      "storageNumber": "Office Safe - Drawer S1",
+      "isLockedCabinet": true,
+      "lockedCabinetNo": "Locked Cabinet #2",
+      "verificationQuestions": [
+        "What is the last 4 digits on the debit card?",
+        "What is the college bus route number on the pass?"
+      ],
+      "verificationAnswers": [
+        "4092",
+        "Route 12"
+      ],
+      "status": "Unclaimed",
+      "createdAt": "2026-10-04T11:00:00.000Z"
+    },
+    {
+      "id": "MCET-FND-103",
+      "title": "Casio Scientific Calculator fx-991CW",
+      "category": "Electronics",
+      "description": "Found in Centenary Central Library reference reading section on desk 14.",
+      "privateNotes": "Black casing, student initials 'K.R.' scratched with compass needle on battery compartment back cover.",
+      "isSensitive": false,
+      "locationName": "Centenary Central Library, Ground Floor",
+      "coordinates": { "lat": 10.6635, "lng": 77.0112, "zone": "Central Library" },
+      "dateFound": "2026-10-01",
+      "finderRollNo": "727622BCS042",
+      "finderName": "Priya S",
+      "storageNumber": "Shelf B-2",
+      "isLockedCabinet": true,
+      "lockedCabinetNo": "Locked Cabinet #1",
+      "verificationQuestions": [
+        "What initials or mark is scratched on the calculator back cover?",
+        "What color is the protective slide cover?"
+      ],
+      "verificationAnswers": [
+        "Initials 'K.R.' on battery compartment",
+        "Black"
+      ],
+      "status": "Unclaimed",
+      "createdAt": "2026-10-01T16:45:00.000Z"
+    },
+    {
+      "id": "MCET-FND-104",
+      "title": "Wildcraft Navy Blue Backpack with Engineering Graphics Instruments",
+      "category": "Bags & Pouches",
+      "description": "Found in Nachimuthu Polytechnic (NPT) junction corridor pathway bench.",
+      "privateNotes": "Contains mini-drafter, Nataraj 30cm ruler, roll of chart papers, and yellow umbrella inside side pocket.",
+      "isSensitive": false,
+      "locationName": "Nachimuthu Polytechnic Junction Pathway",
+      "coordinates": { "lat": 10.6625, "lng": 77.0085, "zone": "Nachimuthu Polytechnic Junction" },
+      "dateFound": "2026-09-15",
+      "finderRollNo": "727621BME019",
+      "finderName": "Karthik R",
+      "storageNumber": "Shelf C-1",
+      "isLockedCabinet": false,
+      "lockedCabinetNo": null,
+      "verificationQuestions": [
+        "What item was kept inside the mesh side water bottle pocket?",
+        "What drawing tools are inside the main compartment?"
+      ],
+      "verificationAnswers": [
+        "Yellow compact folding umbrella",
+        "Mini drafter and roll of chart papers"
+      ],
+      "status": "Unclaimed",
+      "createdAt": "2026-09-15T09:30:00.000Z"
+    },
+    {
+      "id": "MCET-FND-105",
+      "title": "Stainless Steel Milton Thermosteel Water Bottle (Silver)",
+      "category": "Water Bottles",
+      "description": "Found in Student Amenities Canteen dining table near juice counter.",
+      "privateNotes": "Silver 1000ml bottle with faded red MCET sports sticker on the bottom rim.",
+      "isSensitive": false,
+      "locationName": "Student Amenities & Canteen",
+      "coordinates": { "lat": 10.6620, "lng": 77.0118, "zone": "Student Canteen" },
+      "dateFound": "2026-10-05",
+      "finderRollNo": "727623BEC015",
+      "finderName": "Ananya M",
+      "storageNumber": "Shelf D-3",
+      "isLockedCabinet": false,
+      "lockedCabinetNo": null,
+      "verificationQuestions": [
+        "What sticker is placed on the lower rim of the bottle?",
+        "What is the capacity of the bottle?"
+      ],
+      "verificationAnswers": [
+        "Red MCET sports sticker",
+        "1000ml / 1 Liter"
+      ],
+      "status": "Unclaimed",
+      "createdAt": "2026-10-05T13:10:00.000Z"
+    },
+    {
+      "id": "MCET-FND-106",
+      "title": "Set of Bike Keys with Pulsar Leather Keychain",
+      "category": "Keys",
+      "description": "Found near Main Entrance Gate & NH 83 Bus Stop motorcycle parking shed.",
+      "privateNotes": "Two keys: one black Bajaja ignition key and one small brass padlock key. Keychain has silver Bajaj logo on black leather.",
+      "isSensitive": false,
+      "locationName": "Main Gate & NH 83 Parking Area",
+      "coordinates": { "lat": 10.6645, "lng": 77.0095, "zone": "Main Entrance Gate" },
+      "dateFound": "2026-08-10",
+      "finderRollNo": "Campus Security Post 1",
+      "finderName": "Security Guard S. Murugan",
+      "storageNumber": "Shelf A-1",
+      "isLockedCabinet": true,
+      "lockedCabinetNo": "Locked Cabinet #1",
+      "verificationQuestions": [
+        "How many keys are in the ring and what is the second key for?",
+        "What is the design on the leather keychain?"
+      ],
+      "verificationAnswers": [
+        "2 keys (one bike ignition key, one small brass padlock key)",
+        "Pulsar / Bajaj silver emblem on black leather"
+      ],
+      "status": "Expired",
+      "expiryAction": "Welfare Fund",
+      "createdAt": "2026-08-10T17:00:00.000Z"
+    }
+  ],
+  "lostReports": [
+    {
+      "id": "LST-2026-001",
+      "studentUid": "std_karthik",
+      "studentRollNo": "727621BME019",
+      "studentName": "Karthik R",
+      "studentPhone": "+91 94432 11002",
+      "category": "Electronics",
+      "description": "Lost my original HP laptop adapter (USB Type-C, 65W) with black electrical tape around cord near Block B lab corridor.",
+      "locationName": "Block B Corridor near CAD Lab",
+      "coordinates": { "lat": 10.6613, "lng": 77.0104, "zone": "Block B" },
+      "dateLost": "2026-09-28",
+      "status": "Active",
+      "createdAt": "2026-09-29T08:15:00.000Z"
+    },
+    {
+      "id": "LST-2026-002",
+      "studentUid": "std_priya",
+      "studentRollNo": "727622BCS042",
+      "studentName": "Priya S",
+      "studentPhone": "+91 98765 43210",
+      "category": "Water Bottles",
+      "description": "Lost a silver Milton thermosteel water bottle at the main canteen around lunch time.",
+      "locationName": "Student Amenities & Canteen",
+      "coordinates": { "lat": 10.6621, "lng": 77.0117, "zone": "Student Canteen" },
+      "dateLost": "2026-10-05",
+      "status": "Active",
+      "createdAt": "2026-10-05T15:00:00.000Z"
+    }
+  ],
+  "claims": [
+    {
+      "id": "CLM-2026-001",
+      "itemId": "MCET-FND-105",
+      "itemTitle": "Stainless Steel Milton Thermosteel Water Bottle (Silver)",
+      "studentUid": "std_priya",
+      "studentRollNo": "727622BCS042",
+      "studentName": "Priya S",
+      "studentPhone": "+91 98765 43210",
+      "studentDept": "Computer Science & Engineering (CSE)",
+      "answers": [
+        "Faded red MCET sports sticker on the bottom rim",
+        "1 Liter / 1000 ml"
+      ],
+      "status": "Ready for Pickup",
+      "adminNotes": "Answers strictly match the logged inspection data. Approved for physical collection.",
+      "reviewedBy": "office1.admin",
+      "history": [
+        { "status": "Requested", "timestamp": "2026-10-06T10:15:00.000Z", "note": "Claim submitted by Priya S with verification answers." },
+        { "status": "Approved", "timestamp": "2026-10-06T14:30:00.000Z", "note": "Admin reviewed and approved ownership verification." },
+        { "status": "Ready for Pickup", "timestamp": "2026-10-07T09:00:00.000Z", "note": "Item staged at Admin Office desk. Bring physical college ID card." }
+      ],
+      "createdAt": "2026-10-06T10:15:00.000Z"
+    }
+  ],
+  "handoverLogs": [
+    {
+      "id": "HLOG-2026-079",
+      "itemId": "MCET-FND-094",
+      "itemTitle": "Fastrack Analog Wristwatch (Black Strap)",
+      "studentRollNo": "727622BEI021",
+      "studentName": "Saravanan M",
+      "studentDept": "ECE",
+      "releasedBy": "office1.admin",
+      "timestamp": "2026-09-24T15:45:00.000Z",
+      "idVerified": true,
+      "storageNumber": "Shelf A-2",
+      "notes": "Physical College ID Card No. 727622BEI021 physically verified. Signature obtained on register book."
+    },
+    {
+      "id": "HLOG-2026-080",
+      "itemId": "MCET-FND-098",
+      "itemTitle": "Lab Record Notebook - Data Structures & Algorithms",
+      "studentRollNo": "727623BCS089",
+      "studentName": "Divya N",
+      "studentDept": "CSE",
+      "releasedBy": "office1.admin",
+      "timestamp": "2026-10-02T11:20:00.000Z",
+      "idVerified": true,
+      "storageNumber": "Shelf B-1",
+      "notes": "ID Card verified. Handed over directly to student Divya N."
+    }
+  ],
+  "notifications": [
+    {
+      "id": "NTF-2026-01",
+      "recipientUid": "std_priya",
+      "title": "🎉 Claim Ready for Pickup!",
+      "message": "Your claim for 'Stainless Steel Milton Thermosteel Water Bottle' is approved! Please collect it from Admin Block, Ground Floor, Room 102 with your physical College ID card.",
+      "type": "claim_status",
+      "read": false,
+      "createdAt": "2026-10-07T09:00:00.000Z"
+    },
+    {
+      "id": "NTF-2026-02",
+      "recipientUid": "std_karthik",
+      "title": "⚡ Potential Match Detected for Your Lost Report",
+      "message": "A newly logged found item 'HP Blue Laptop Charger (65W USB-C)' closely matches your lost report from Block B. Check Browse items or visit the Admin Office.",
+      "type": "match_alert",
+      "read": false,
+      "createdAt": "2026-09-29T10:00:00.000Z"
+    },
+    {
+      "id": "NTF-2026-03",
+      "recipientUid": "all",
+      "isBroadcast": true,
+      "title": "📢 Weekly Unclaimed Items Digest (MCET Property Recovery)",
+      "message": "5 new unclaimed items logged this week including electronics, calculators, and water bottles. Check the browse board before the 45-day holding period expires.",
+      "type": "weekly_digest",
+      "read": true,
+      "createdAt": "2026-10-06T09:00:00.000Z"
+    }
+  ]
+}
