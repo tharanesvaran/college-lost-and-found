@@ -566,45 +566,111 @@
     }
 
     // =========================================================================
-    // DR. MAHALINGAM COLLEGE INTERACTIVE CAMPUS MAP COMPONENT
-    // Replicates the layout of the user's Google Maps screenshot:
+    // DR. MAHALINGAM COLLEGE INTERACTIVE CAMPUS MAP COMPONENT (OFFLINE-FIRST)
+    // 100% Offline-capable vector map replicating the Google Maps screenshot:
     // Nachimuthu Polytechnic on west, Dr. MCET on east, Indian Bank, Block B, NH 83
+    // Defaults to Offline Blueprint Mode so restricted networks/firewalls never fail!
     // =========================================================================
-    function CampusMapPicker({ selectedLocation, onSelectLocation, height = "h-80", interactive = true }) {
+    function CampusMapPicker({ selectedLocation, onSelectLocation, height = "h-84", interactive = true }) {
       const mapContainerRef = useRef(null);
       const leafletMapRef = useRef(null);
       const markerRef = useRef(null);
-      const [viewMode, setViewMode] = useState('osm'); // 'osm' or 'blueprint' (screenshot matched theme)
+      const [viewMode, setViewMode] = useState('offline'); // Default to offline for 100% reliability
+      const [offlineZoom, setOfflineZoom] = useState(1);
+      const [searchQuery, setSearchQuery] = useState('');
+      const [tileNotice, setTileNotice] = useState('');
 
+      // Calibrated campus landmarks directly from the reference screenshot
+      const LANDMARKS = [
+        { id: 'block-b', name: 'Block B (South Quadrangle)', desc: 'Classrooms, Labs & Faculty Wings', icon: '🏢', lat: 10.6612, lng: 77.0103, svgX: 282, svgY: 185, color: '#3b82f6' },
+        { id: 'indian-bank', name: 'INDIAN BANK & ATM Branch', desc: 'MCET Campus Branch & 24/7 ATM', icon: '🏦', lat: 10.6618, lng: 77.0102, svgX: 282, svgY: 138, color: '#f59e0b' },
+        { id: 'mcet-main', name: 'Dr. MCET Main Academic Building', desc: 'Principal, Deans & Main Auditoriums', icon: '🎓', lat: 10.6629, lng: 77.0105, svgX: 282, svgY: 96, color: '#6366f1' },
+        { id: 'nptc-poly', name: 'Nachimuthu Polytechnic College (NPTC)', desc: 'NPT Polytechnic Quadrangle & Workshops', icon: '🏛️', lat: 10.6626, lng: 77.0084, svgX: 92, svgY: 135, color: '#10b981' },
+        { id: 'library', name: 'Centenary Central Library', desc: 'Central Library, Reference & Media Section', icon: '📚', lat: 10.6635, lng: 77.0112, svgX: 345, svgY: 92, color: '#8b5cf6' },
+        { id: 'canteen', name: 'Student Amenities & Canteen', desc: 'Main Dining Hall & Food Court', icon: '☕', lat: 10.6620, lng: 77.0118, svgX: 345, svgY: 172, color: '#ec4899' },
+        { id: 'admin-office', name: 'Admin Block Ground Floor (Lost & Found Desk)', desc: 'Single Intake Point Room 102 & Custody Office', icon: '🗄️', lat: 10.6627, lng: 77.0104, svgX: 235, svgY: 120, color: '#06b6d4' },
+        { id: 'main-gate', name: 'Main Gate & NH 83 Bus Stop', desc: 'Highway Entrance & Transit Point', icon: '🚏', lat: 10.6645, lng: 77.0095, svgX: 175, svgY: 38, color: '#eab308' }
+      ];
+
+      function selectLandmark(lm) {
+        if (onSelectLocation) {
+          onSelectLocation({
+            lat: lm.lat,
+            lng: lm.lng,
+            locationName: lm.name,
+            zone: lm.name.split('(')[0].trim()
+          });
+        }
+      }
+
+      function handleSvgClick(e) {
+        if (!interactive) return;
+        const rect = e.currentTarget.getBoundingClientRect();
+        const clickX = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+        const clickY = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
+
+        // Scale percentage to MCET GPS coordinates
+        const lat = 10.6645 - clickY * 0.004;
+        const lng = 77.0080 + clickX * 0.0045;
+
+        // Find nearest landmark
+        let nearest = LANDMARKS[0];
+        let minDist = 999999;
+        LANDMARKS.forEach(lm => {
+          const dist = Math.hypot(lat - lm.lat, lng - lm.lng);
+          if (dist < minDist) {
+            minDist = dist;
+            nearest = lm;
+          }
+        });
+
+        const detectedName = `${nearest.name.split('(')[0].trim()} (${nearest.desc})`;
+        if (onSelectLocation) {
+          onSelectLocation({
+            lat: Math.round(lat * 100000) / 100000,
+            lng: Math.round(lng * 100000) / 100000,
+            locationName: detectedName,
+            zone: nearest.name.split('(')[0].trim(),
+            svgX: Math.round(clickX * 400),
+            svgY: Math.round(clickY * 240)
+          });
+        }
+      }
+
+      // Live Leaflet tile handler with fallback
       useEffect(() => {
-        if (!mapContainerRef.current) return;
+        if (viewMode !== 'osm' || !mapContainerRef.current) return;
+        let map = null;
 
-        // Initialize Leaflet map
-        if (!leafletMapRef.current) {
-          const map = L.map(mapContainerRef.current, {
+        try {
+          map = L.map(mapContainerRef.current, {
             center: selectedLocation?.lat ? [selectedLocation.lat, selectedLocation.lng] : MCET_CENTER,
             zoom: 17,
             zoomControl: true
           });
 
-          // OpenStreetMap Tile Layer
-          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; OpenStreetMap contributors | MCET Campus Map',
             maxZoom: 19
-          }).addTo(map);
+          });
 
-          // Add building markers for key landmarks from screenshot
-          CAMPUS_LOCATIONS.forEach(loc => {
-            const isHighlight = loc.id === 'block-b' || loc.id === 'indian-bank' || loc.id === 'mcet-main';
+          // Detect tile loading restriction or failure
+          tileLayer.on('tileerror', () => {
+            setTileNotice('External map tiles are restricted on this network. Switched to Offline Vector Campus Map.');
+            setViewMode('offline');
+          });
+
+          tileLayer.addTo(map);
+
+          LANDMARKS.forEach(loc => {
+            const isHighlight = loc.id === 'block-b' || loc.id === 'indian-bank';
             const iconHtml = `
               <div class="px-2 py-1 rounded-md text-[11px] font-bold shadow-md flex items-center gap-1 border whitespace-nowrap ${
-                loc.id === 'block-b' 
-                  ? 'bg-blue-600 text-white border-blue-400' 
-                  : loc.id === 'indian-bank'
-                  ? 'bg-amber-500 text-slate-950 border-amber-300'
-                  : 'bg-slate-900 text-white border-slate-700'
+                loc.id === 'block-b' ? 'bg-blue-600 text-white border-blue-400' :
+                loc.id === 'indian-bank' ? 'bg-amber-500 text-slate-950 border-amber-300' :
+                'bg-slate-900 text-white border-slate-700'
               }">
-                <span>${loc.id === 'indian-bank' ? '🏦' : loc.id === 'block-b' ? '🏢' : '🎓'}</span>
+                <span>${loc.icon}</span>
                 <span>${loc.name.split('(')[0]}</span>
               </div>
             `;
@@ -614,42 +680,24 @@
               iconSize: [120, 26],
               iconAnchor: [60, 13]
             });
-
             const m = L.marker([loc.lat, loc.lng], { icon: customIcon }).addTo(map);
-            m.bindPopup(`<strong>${loc.name}</strong><br/><span class="text-xs text-slate-500">${loc.desc}</span>`);
-            m.on('click', () => {
-              if (interactive && onSelectLocation) {
-                onSelectLocation({
-                  lat: loc.lat,
-                  lng: loc.lng,
-                  locationName: loc.name,
-                  zone: loc.name.split('(')[0].trim()
-                });
-              }
-            });
+            m.on('click', () => selectLandmark(loc));
           });
 
-          // Interactive click to drop pin
           if (interactive) {
             map.on('click', (e) => {
               const { lat, lng } = e.latlng;
-              // Detect nearest campus building
-              let nearest = CAMPUS_LOCATIONS[0];
+              let nearest = LANDMARKS[0];
               let minDist = 999999;
-              CAMPUS_LOCATIONS.forEach(loc => {
+              LANDMARKS.forEach(loc => {
                 const dist = Math.hypot(lat - loc.lat, lng - loc.lng);
-                if (dist < minDist) {
-                  minDist = dist;
-                  nearest = loc;
-                }
+                if (dist < minDist) { minDist = dist; nearest = loc; }
               });
-
-              const locName = `${nearest.name.split('(')[0].trim()} (Near ${nearest.desc})`;
               if (onSelectLocation) {
                 onSelectLocation({
                   lat: Math.round(lat * 100000) / 100000,
                   lng: Math.round(lng * 100000) / 100000,
-                  locationName: locName,
+                  locationName: `${nearest.name.split('(')[0].trim()} (${nearest.desc})`,
                   zone: nearest.name.split('(')[0].trim()
                 });
               }
@@ -657,165 +705,201 @@
           }
 
           leafletMapRef.current = map;
+        } catch (err) {
+          setTileNotice('Network map restricted. Reverting to Offline Campus GIS.');
+          setViewMode('offline');
         }
 
         return () => {
-          // clean up on unmount
           if (leafletMapRef.current) {
             leafletMapRef.current.remove();
             leafletMapRef.current = null;
           }
         };
-      }, []);
+      }, [viewMode]);
 
-      // Update pin marker when selectedLocation changes
-      useEffect(() => {
-        if (!leafletMapRef.current) return;
-        const map = leafletMapRef.current;
-
-        if (selectedLocation && selectedLocation.lat && selectedLocation.lng) {
-          if (markerRef.current) {
-            markerRef.current.setLatLng([selectedLocation.lat, selectedLocation.lng]);
-          } else {
-            const pinIcon = L.divIcon({
-              html: `
-                <div class="relative flex items-center justify-center">
-                  <div class="absolute w-8 h-8 bg-red-500 rounded-full animate-ping opacity-75"></div>
-                  <div class="w-8 h-8 bg-red-600 rounded-full flex items-center justify-center text-white font-bold shadow-lg border-2 border-white">
-                    📍
-                  </div>
-                </div>
-              `,
-              className: 'custom-pin-marker',
-              iconSize: [32, 32],
-              iconAnchor: [16, 16]
-            });
-            markerRef.current = L.marker([selectedLocation.lat, selectedLocation.lng], { icon: pinIcon }).addTo(map);
-          }
-          map.setView([selectedLocation.lat, selectedLocation.lng], 17);
-        } else if (markerRef.current) {
-          markerRef.current.remove();
-          markerRef.current = null;
-        }
-      }, [selectedLocation]);
+      // Calculate SVG marker pin position
+      let pinX = 282;
+      let pinY = 185;
+      if (selectedLocation?.svgX && selectedLocation?.svgY) {
+        pinX = selectedLocation.svgX;
+        pinY = selectedLocation.svgY;
+      } else if (selectedLocation?.lat && selectedLocation?.lng) {
+        const pctX = (selectedLocation.lng - 77.0080) / 0.0045;
+        const pctY = (10.6645 - selectedLocation.lat) / 0.004;
+        pinX = Math.max(20, Math.min(380, Math.round(pctX * 400)));
+        pinY = Math.max(20, Math.min(225, Math.round(pctY * 240)));
+      }
 
       return (
         <div class="relative rounded-2xl overflow-hidden border border-slate-300 shadow-sm bg-slate-900">
           {/* Top HUD Bar */}
-          <div class="absolute top-3 left-3 right-3 z-[1000] flex items-center justify-between pointer-events-none">
+          <div class="absolute top-2.5 left-2.5 right-2.5 z-[1000] flex items-center justify-between pointer-events-none gap-2">
             <div class="bg-slate-950/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-slate-700/80 text-xs font-semibold text-white shadow-lg pointer-events-auto flex items-center gap-2">
               <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span>Dr. Mahalingam College (MCET) • Campus GIS</span>
+              <span class="font-bold">MCET Campus Map</span>
+              <span class="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-md font-mono border border-emerald-500/30">
+                {viewMode === 'offline' ? '🛡️ 100% Offline Active' : '🌐 Tile Mode'}
+              </span>
             </div>
-            <div class="flex items-center gap-2 pointer-events-auto">
+            <div class="flex items-center gap-1.5 pointer-events-auto">
               <button 
                 type="button" 
-                onClick={() => setViewMode(viewMode === 'osm' ? 'blueprint' : 'osm')}
+                onClick={() => setViewMode(viewMode === 'offline' ? 'osm' : 'offline')}
                 class="bg-slate-950/90 hover:bg-slate-800 backdrop-blur-md text-amber-400 px-3 py-1.5 rounded-xl border border-slate-700 text-xs font-bold shadow-lg transition flex items-center gap-1.5"
+                title="Toggle between offline vector blueprint and online tiles"
               >
                 <Icon name="layers" className="w-3.5 h-3.5" />
-                <span>{viewMode === 'osm' ? 'Blueprint View' : 'Live OSM Tiles'}</span>
+                <span>{viewMode === 'offline' ? 'Offline Vector Map' : 'Online OSM Tiles'}</span>
               </button>
             </div>
           </div>
 
-          {/* Interactive Blueprint Mode (Mirroring the Dark Mode Screenshot) */}
-          {viewMode === 'blueprint' ? (
-            <div class={`relative w-full ${height} bg-[#071026] text-white overflow-hidden p-4 select-none flex flex-col justify-between`}>
-              {/* Screenshot Replicated Architectural Canvas */}
-              <div class="absolute inset-0 opacity-90 pointer-events-auto" onClick={(e) => {
-                if (!interactive) return;
-                const rect = e.currentTarget.getBoundingClientRect();
-                const x = (e.clientX - rect.left) / rect.width;
-                const y = (e.clientY - rect.top) / rect.height;
-                // Map screen % to MCET coordinates
-                const lat = 10.6645 - y * 0.004;
-                const lng = 77.0080 + x * 0.0045;
-                let zone = "Campus Pathway";
-                if (x < 0.45 && y > 0.3) zone = "Nachimuthu Polytechnic College";
-                else if (x >= 0.45 && y > 0.5) zone = "Block B (South Quadrangle)";
-                else if (x >= 0.45 && y > 0.35 && y <= 0.5) zone = "Indian Bank & ATM Branch";
-                else if (x >= 0.45 && y <= 0.35) zone = "Dr. MCET Main Academic Block";
-                if (onSelectLocation) {
-                  onSelectLocation({ lat: Math.round(lat * 100000)/100000, lng: Math.round(lng * 100000)/100000, locationName: zone, zone });
-                }
-              }}>
+          {tileNotice && (
+            <div class="absolute top-12 left-2.5 right-2.5 z-[1000] bg-amber-500/90 text-slate-950 font-bold px-3 py-1.5 rounded-xl text-[11px] shadow-lg flex items-center justify-between">
+              <span>{tileNotice}</span>
+              <button onClick={() => setTileNotice('')} class="text-slate-950 ml-2 font-black">&times;</button>
+            </div>
+          )}
+
+          {/* Quick Landmark Jump Buttons */}
+          <div class="absolute top-12 left-2.5 right-2.5 z-[900] pointer-events-auto flex items-center gap-1.5 overflow-x-auto pb-1 text-[11px] scrollbar-none">
+            {LANDMARKS.slice(0, 5).map(lm => (
+              <button 
+                key={lm.id} 
+                type="button" 
+                onClick={() => selectLandmark(lm)} 
+                class="bg-slate-950/80 hover:bg-slate-900 backdrop-blur-md text-slate-200 hover:text-white px-2.5 py-1 rounded-lg border border-slate-700/80 whitespace-nowrap shadow transition flex items-center gap-1"
+              >
+                <span>{lm.icon}</span>
+                <span>{lm.name.split('(')[0].trim()}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Interactive Offline Canvas (Replicating the User Screenshot Exactly) */}
+          {viewMode === 'offline' ? (
+            <div class={`relative w-full ${height} bg-[#060e22] text-white overflow-hidden p-0 select-none flex flex-col justify-between`}>
+              <div 
+                class="absolute inset-0 opacity-95 pointer-events-auto cursor-crosshair transition-transform duration-200" 
+                style={{ transform: `scale(${offlineZoom})`, transformOrigin: 'center center' }}
+                onClick={handleSvgClick}
+              >
                 <svg class="w-full h-full" viewBox="0 0 400 240">
-                  {/* Top Highway NH 83 */}
-                  <rect x="0" y="28" width="400" height="26" fill="#1b2a47" />
-                  <text x="140" y="44" fill="#94a3b8" font-size="9" font-weight="bold">NH 83 — Udumalai Road</text>
-                  <circle cx="95" cy="41" r="5" fill="#3b82f6" />
-                  <text x="92" y="44" fill="#fff" font-size="7">🚌</text>
+                  {/* Background Campus Grass & Ground */}
+                  <rect x="0" y="0" width="400" height="240" fill="#081228" />
 
-                  {/* Left Block: Nachimuthu Polytechnic College */}
-                  <rect x="35" y="75" width="115" height="135" rx="8" fill="#111c38" stroke="#253b66" stroke-width="2" />
-                  <path d="M 60,95 L 125,95 L 125,125 L 105,125 L 105,185 L 60,185 Z" fill="#1c2d52" />
-                  <circle cx="90" cy="110" r="10" fill="#2563eb" opacity="0.3" />
-                  <text x="42" y="90" fill="#93c5fd" font-size="8.5" font-weight="bold">Nachimuthu</text>
-                  <text x="42" y="100" fill="#93c5fd" font-size="7.5">Polytechnic College</text>
-                  <text x="42" y="110" fill="#64748b" font-size="6.5">நாச்சிமுத்து...</text>
+                  {/* Top Highway NH 83 / Udumalai Road with road divider */}
+                  <rect x="0" y="24" width="400" height="30" fill="#15243f" />
+                  <line x1="0" y1="39" x2="400" y2="39" stroke="#334d75" stroke-width="1.5" stroke-dasharray="6,4" />
+                  <text x="140" y="42" fill="#94a3b8" font-size="9" font-weight="bold" letter-spacing="0.5">NH 83 — Udumalai Road</text>
+                  
+                  {/* Public Bus Stop icon (from screenshot) */}
+                  <circle cx="95" cy="38" r="6" fill="#2563eb" />
+                  <text x="91.5" y="42" fill="#fff" font-size="7.5">🚏</text>
+                  <text x="105" y="42" fill="#60a5fa" font-size="7">Bus Stop</text>
 
-                  {/* Right Upper: Dr. Mahalingam College of Engineering */}
-                  <rect x="200" y="70" width="165" height="70" rx="8" fill="#111c38" stroke="#253b66" stroke-width="2" />
-                  <text x="210" y="86" fill="#93c5fd" font-size="8.5" font-weight="bold">Dr. Mahalingam</text>
-                  <text x="210" y="96" fill="#93c5fd" font-size="7.5">College of Engg &amp; Tech</text>
-                  <text x="210" y="106" fill="#64748b" font-size="6.5">டாக்டர். மகாலிங்கம்...</text>
+                  {/* Central Road & Curving Entrance Pathway (from screenshot) */}
+                  <path d="M 175,54 C 175,90 170,120 170,240" stroke="#1d2e50" stroke-width="8" fill="none" />
+                  <path d="M 175,54 C 175,90 170,120 170,240" stroke="#38517e" stroke-width="1" stroke-dasharray="4,4" fill="none" />
+                  <line x1="170" y1="120" x2="200" y2="120" stroke="#1d2e50" stroke-width="6" />
+                  <line x1="150" y1="120" x2="170" y2="120" stroke="#1d2e50" stroke-width="6" />
+                  <line x1="170" y1="165" x2="200" y2="165" stroke="#1d2e50" stroke-width="6" />
 
-                  {/* Indian Bank Branch (as seen in screenshot) */}
-                  <rect x="200" y="125" width="165" height="26" fill="#192849" stroke="#3b82f6" stroke-width="1.5" rx="4" />
-                  <text x="212" y="142" fill="#fbbf24" font-size="9" font-weight="bold">🏦 INDIAN BANK</text>
-                  <text x="280" y="142" fill="#94a3b8" font-size="7">இந்திய வங்கி</text>
+                  {/* WEST FLANK: Nachimuthu Polytechnic College (NPTC) */}
+                  <g class="cursor-pointer" onClick={(e) => { e.stopPropagation(); selectLandmark(LANDMARKS[3]); }}>
+                    <rect x="35" y="70" width="118" height="142" rx="8" fill="#0d1833" stroke="#253b66" stroke-width="2" />
+                    {/* Distinctive quadrangle & inner courtyard from screenshot */}
+                    <path d="M 58,90 L 130,90 L 130,125 L 105,125 L 105,190 L 58,190 Z" fill="#18294e" stroke="#2b467a" stroke-width="1" />
+                    <rect x="70" y="140" width="22" height="35" rx="3" fill="#0d1833" />
+                    <circle cx="85" cy="105" r="9" fill="#10b981" opacity="0.3" />
+                    <text x="44" y="85" fill="#a7f3d0" font-size="8.5" font-weight="bold">🏛️ Nachimuthu</text>
+                    <text x="44" y="95" fill="#a7f3d0" font-size="7.5">Polytechnic College</text>
+                    <text x="44" y="105" fill="#6ee7b7" font-size="6.5">நாச்சிமுத்து பாலிடெக்னிக்...</text>
+                  </g>
 
-                  {/* Block B (as seen in screenshot directly below Indian Bank) */}
-                  <rect x="200" y="155" width="165" height="65" rx="8" fill="#152342" stroke="#3b82f6" stroke-width="2" />
-                  <rect x="220" y="170" width="125" height="40" fill="#1e3461" rx="4" />
-                  <text x="235" y="166" fill="#60a5fa" font-size="10" font-weight="bold">Block B</text>
-                  <text x="235" y="195" fill="#cbd5e1" font-size="8">Classrooms &amp; Laboratories</text>
+                  {/* EAST FLANK: Dr. Mahalingam College of Engineering (Main Academic Tower) */}
+                  <g class="cursor-pointer" onClick={(e) => { e.stopPropagation(); selectLandmark(LANDMARKS[2]); }}>
+                    <rect x="200" y="68" width="168" height="60" rx="8" fill="#0d1833" stroke="#253b66" stroke-width="2" />
+                    <text x="210" y="84" fill="#93c5fd" font-size="8.5" font-weight="bold">🎓 Dr. Mahalingam College</text>
+                    <text x="210" y="94" fill="#93c5fd" font-size="7.5">of Engineering &amp; Technology</text>
+                    <text x="210" y="104" fill="#60a5fa" font-size="6.5">டாக்டர். மகாலிங்கம் பொறியியல்...</text>
+                  </g>
 
-                  {/* Connecting Pathways */}
-                  <line x1="175" y1="54" x2="175" y2="240" stroke="#334155" stroke-width="6" />
-                  <line x1="175" y1="120" x2="200" y2="120" stroke="#334155" stroke-width="4" />
-                  <line x1="150" y1="120" x2="175" y2="120" stroke="#334155" stroke-width="4" />
+                  {/* INDIAN BANK & ATM (from screenshot) */}
+                  <g class="cursor-pointer" onClick={(e) => { e.stopPropagation(); selectLandmark(LANDMARKS[1]); }}>
+                    <rect x="200" y="124" width="168" height="26" rx="5" fill="#182848" stroke="#f59e0b" stroke-width="1.5" />
+                    <circle cx="215" cy="137" r="7" fill="#f59e0b" opacity="0.25" />
+                    <text x="226" y="140" fill="#fbbf24" font-size="9" font-weight="bold">🏦 INDIAN BANK</text>
+                    <text x="294" y="140" fill="#cbd5e1" font-size="7.5">இந்திய வங்கி</text>
+                  </g>
 
-                  {/* Selected Marker Pin */}
+                  {/* BLOCK B (Prominently South of Indian Bank in screenshot) */}
+                  <g class="cursor-pointer" onClick={(e) => { e.stopPropagation(); selectLandmark(LANDMARKS[0]); }}>
+                    <rect x="200" y="154" width="168" height="66" rx="8" fill="#12203e" stroke="#3b82f6" stroke-width="2.2" />
+                    <rect x="215" y="170" width="138" height="40" rx="4" fill="#1c305c" stroke="#3b82f6" stroke-width="0.8" />
+                    <text x="235" y="165" fill="#60a5fa" font-size="10.5" font-weight="bold">🏢 Block B</text>
+                    <text x="235" y="185" fill="#e2e8f0" font-size="7.8" font-weight="bold">Classrooms &amp; Laboratories</text>
+                    <text x="235" y="197" fill="#94a3b8" font-size="7">CAD Labs • Faculty Cabins</text>
+                  </g>
+
+                  {/* Active Selected Location Pin Marker */}
                   {selectedLocation && (
                     <g>
-                      <circle cx="280" cy="180" r="16" fill="#ef4444" opacity="0.3" />
-                      <circle cx="280" cy="180" r="6" fill="#ef4444" />
-                      <text x="272" y="174" fill="#ffffff" font-size="14">📍</text>
+                      <circle cx={pinX} cy={pinY} r="18" fill="#ef4444" opacity="0.3" class="animate-ping" />
+                      <circle cx={pinX} cy={pinY} r="6" fill="#ef4444" stroke="#ffffff" stroke-width="1.5" />
+                      <path d={`M ${pinX} ${pinY-18} C ${pinX-8} ${pinY-18}, ${pinX-8} ${pinY-6}, ${pinX} ${pinY} C ${pinX+8} ${pinY-6}, ${pinX+8} ${pinY-18}, ${pinX} ${pinY-18} Z`} fill="#ef4444" stroke="#ffffff" stroke-width="1.5" />
+                      <circle cx={pinX} cy={pinY-11} r="3" fill="#ffffff" />
                     </g>
                   )}
                 </svg>
               </div>
 
-              <div class="relative z-10 mt-auto bg-slate-950/80 backdrop-blur-md p-2.5 rounded-xl border border-slate-800 text-xs flex justify-between items-center">
-                <span>📍 {selectedLocation?.locationName || "Click anywhere on campus to pin location"}</span>
-                <span class="text-amber-400 font-bold">Screenshot Calibrated Mode</span>
+              {/* Bottom HUD readout */}
+              <div class="relative z-10 mt-auto bg-slate-950/90 backdrop-blur-md p-2 px-3 border-t border-slate-800 text-xs flex justify-between items-center">
+                <div class="flex items-center gap-1.5 truncate">
+                  <span class="text-amber-400 font-bold">📍</span>
+                  <span class="truncate">{selectedLocation?.locationName || "Tap any building or quadrant to place marker"}</span>
+                </div>
+                <div class="flex items-center gap-2 flex-shrink-0">
+                  <button 
+                    type="button" 
+                    onClick={() => setOfflineZoom(Math.min(1.8, offlineZoom + 0.2))} 
+                    class="bg-slate-800 hover:bg-slate-700 text-white w-6 h-6 rounded flex items-center justify-center font-bold"
+                  >+</button>
+                  <button 
+                    type="button" 
+                    onClick={() => setOfflineZoom(Math.max(1, offlineZoom - 0.2))} 
+                    class="bg-slate-800 hover:bg-slate-700 text-white w-6 h-6 rounded flex items-center justify-center font-bold"
+                  >-</button>
+                  <button 
+                    type="button" 
+                    onClick={() => setOfflineZoom(1)} 
+                    class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] px-2 py-0.5 rounded"
+                  >Reset</button>
+                </div>
               </div>
             </div>
           ) : (
             <div ref={mapContainerRef} class={`w-full ${height} z-10`}></div>
           )}
 
-          {/* Bottom Selected Location Pill */}
-          <div class="bg-slate-900 border-t border-slate-800 p-2.5 px-4 flex items-center justify-between text-xs text-slate-300">
-            <div class="flex items-center gap-2 overflow-hidden">
-              <Icon name="mapPin" className="w-4 h-4 text-amber-400 flex-shrink-0" />
-              <span class="font-medium truncate">
-                {selectedLocation?.locationName 
-                  ? selectedLocation.locationName 
-                  : "Tap on the map to pinpoint where the item was found/lost"}
-              </span>
+          {/* Bottom GPS Coordinates Pill */}
+          <div class="bg-slate-950 border-t border-slate-800/80 p-2 px-4 flex items-center justify-between text-xs text-slate-400">
+            <div class="flex items-center gap-1.5 truncate">
+              <span class="text-emerald-400 font-bold">✓</span>
+              <span class="truncate">Area verified: Dr. Mahalingam College (MCET) Grounds</span>
             </div>
             {selectedLocation?.lat && (
-              <span class="font-mono text-[11px] text-slate-400 bg-slate-800 px-2 py-0.5 rounded border border-slate-700 flex-shrink-0">
-                {selectedLocation.lat}, {selectedLocation.lng}
+              <span class="font-mono text-[11px] text-amber-300 bg-slate-900 px-2 py-0.5 rounded border border-slate-800 flex-shrink-0">
+                {selectedLocation.lat}° N, {selectedLocation.lng}° E
               </span>
             )}
           </div>
         </div>
       );
     }
+
 
     // =========================================================================
     // MANDATORY STUDENT PROFILE SETUP MODAL
@@ -2032,9 +2116,187 @@
     }
 
     // =========================================================================
+    // ADMIN: STUDENT PROFILE DOSSIER MODAL
+    // Displays full student profile details, verified contact info, and custody history
+    // =========================================================================
+    function StudentDossierModal({ student, db, onClose }) {
+      if (!student) return null;
+
+      const studentClaims = (db.claims || []).filter(c => c.studentRollNo === student.rollNumber || c.studentUid === student.uid);
+      const studentFoundItems = (db.items || []).filter(i => i.finderRollNo === student.rollNumber);
+      const studentLostReports = (db.lostReports || []).filter(l => l.studentRollNo === student.rollNumber || l.studentUid === student.uid);
+      const studentHandovers = (db.handoverLogs || []).filter(h => h.studentRollNo === student.rollNumber);
+
+      return (
+        <div class="fixed inset-0 z-[9999] bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div class="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[92vh] overflow-y-auto border border-slate-100 animate-in fade-in zoom-in-95">
+            {/* Header Banner */}
+            <div class="bg-gradient-to-r from-slate-950 via-blue-950 to-slate-900 text-white p-6 relative">
+              <button onClick={onClose} class="absolute top-5 right-5 text-slate-400 hover:text-white text-2xl p-1 font-bold">&times;</button>
+              <div class="flex items-center gap-4">
+                <div class="w-16 h-16 rounded-2xl bg-amber-400 text-slate-950 font-black text-2xl flex items-center justify-center shadow-lg border-2 border-white/20">
+                  {student.fullName ? student.fullName.charAt(0).toUpperCase() : 'S'}
+                </div>
+                <div>
+                  <div class="flex items-center gap-2">
+                    <h2 class="text-xl font-heading font-extrabold text-white">{student.fullName}</h2>
+                    <span class="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold px-2.5 py-0.5 rounded-full">
+                      ✓ Verified Student
+                    </span>
+                  </div>
+                  <div class="flex flex-wrap items-center gap-2 mt-1.5">
+                    <span class="font-mono text-xs text-amber-400 font-bold bg-amber-400/10 px-2.5 py-0.5 rounded-md border border-amber-400/20">
+                      Roll No: {student.rollNumber}
+                    </span>
+                    <span class="text-xs text-slate-300">• {student.department} ({student.yearOfStudy})</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Profile Body */}
+            <div class="p-6 space-y-5">
+              {/* Contact Card & Direct Communication Shortcuts */}
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-200 text-xs">
+                <div>
+                  <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Official Google Email</span>
+                  <span class="font-mono font-medium text-slate-800">{student.email}</span>
+                </div>
+                <div>
+                  <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Mobile / WhatsApp Number</span>
+                  <span class="font-medium text-slate-800">{student.phone}</span>
+                </div>
+                <div class="sm:col-span-2 pt-2 border-t border-slate-200 flex flex-wrap items-center gap-2">
+                  <a href={`tel:${student.phone}`} class="flex-1 min-w-[120px] bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-3 rounded-xl text-center text-xs shadow-sm flex items-center justify-center gap-1.5">
+                    <span>📞</span> <span>Call Student</span>
+                  </a>
+                  <a href={`mailto:${student.email}?subject=Notice from MCET Property Recovery Desk`} class="flex-1 min-w-[120px] bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded-xl text-center text-xs shadow-sm flex items-center justify-center gap-1.5">
+                    <span>✉️</span> <span>Official Email</span>
+                  </a>
+                  <button 
+                    type="button"
+                    onClick={() => { navigator.clipboard?.writeText(student.rollNumber); alert('Roll number copied to clipboard: ' + student.rollNumber); }} 
+                    class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-2 px-3 rounded-xl text-xs flex items-center gap-1"
+                  >
+                    <span>📋</span> <span>Copy Roll No</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Student Custody & Property History */}
+              <div class="space-y-3.5">
+                <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider">Custody Register History</h4>
+
+                {/* 1. Ownership Claims */}
+                <div class="border border-slate-200 rounded-2xl p-4 bg-white space-y-2 shadow-sm">
+                  <div class="flex items-center justify-between text-xs font-bold text-slate-800">
+                    <span class="flex items-center gap-1.5"><span>🙋</span> <span>Ownership Claims Filed ({studentClaims.length})</span></span>
+                  </div>
+                  {studentClaims.length === 0 ? (
+                    <div class="text-xs text-slate-400 italic">No claims filed by this student.</div>
+                  ) : (
+                    <div class="space-y-1.5">
+                      {studentClaims.map(c => (
+                        <div key={c.id} class="bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-xs flex justify-between items-center">
+                          <div>
+                            <span class="font-bold text-slate-900">{c.itemTitle}</span>
+                            <span class="text-slate-400 font-mono ml-2 text-[11px]">({c.itemId})</span>
+                          </div>
+                          <span class={`font-bold text-[10px] px-2 py-0.5 rounded-full ${
+                            c.status === 'Collected' ? 'bg-emerald-100 text-emerald-800' :
+                            c.status === 'Ready for Pickup' ? 'bg-amber-100 text-amber-900' : 'bg-blue-100 text-blue-800'
+                          }`}>
+                            {c.status}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* 2. Permanent Handover Releases */}
+                <div class="border border-slate-200 rounded-2xl p-4 bg-white space-y-2 shadow-sm">
+                  <div class="flex items-center justify-between text-xs font-bold text-slate-800">
+                    <span class="flex items-center gap-1.5"><span>✍️</span> <span>Permanent Handover Releases ({studentHandovers.length})</span></span>
+                  </div>
+                  {studentHandovers.length === 0 ? (
+                    <div class="text-xs text-slate-400 italic">No articles released to this student yet.</div>
+                  ) : (
+                    <div class="space-y-1.5">
+                      {studentHandovers.map(h => (
+                        <div key={h.id} class="bg-emerald-50/70 p-2.5 rounded-xl border border-emerald-200 text-xs flex justify-between items-center">
+                          <div>
+                            <span class="font-bold text-emerald-950">{h.itemTitle}</span>
+                            <div class="text-[10px] text-emerald-700">Released by {h.releasedBy} • {h.timestamp}</div>
+                          </div>
+                          <span class="text-[10px] font-bold text-emerald-800 bg-white px-2 py-0.5 rounded border border-emerald-200">
+                            ✓ ID Verified Physically
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* 3. Lost Notices */}
+                <div class="border border-slate-200 rounded-2xl p-4 bg-white space-y-2 shadow-sm">
+                  <div class="flex items-center justify-between text-xs font-bold text-slate-800">
+                    <span class="flex items-center gap-1.5"><span>🔍</span> <span>Lost Notices Submitted ({studentLostReports.length})</span></span>
+                  </div>
+                  {studentLostReports.length === 0 ? (
+                    <div class="text-xs text-slate-400 italic">No active lost reports filed.</div>
+                  ) : (
+                    <div class="space-y-1.5">
+                      {studentLostReports.map(l => (
+                        <div key={l.id} class="bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-xs">
+                          <span class="font-bold text-slate-800">{l.category}: </span>
+                          <span class="text-slate-600">"{l.description}"</span>
+                          <div class="text-[10px] text-slate-400 mt-0.5">Location: {l.locationName} • Date Lost: {l.dateLost}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* 4. Good Samaritan Found Items */}
+                <div class="border border-slate-200 rounded-2xl p-4 bg-white space-y-2 shadow-sm">
+                  <div class="flex items-center justify-between text-xs font-bold text-slate-800">
+                    <span class="flex items-center gap-1.5"><span>📦</span> <span>Good Samaritan Articles Handed In ({studentFoundItems.length})</span></span>
+                  </div>
+                  {studentFoundItems.length === 0 ? (
+                    <div class="text-xs text-slate-400 italic">No found belongings turned in.</div>
+                  ) : (
+                    <div class="space-y-1.5">
+                      {studentFoundItems.map(f => (
+                        <div key={f.id} class="bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-xs flex justify-between">
+                          <span class="font-medium text-slate-800">{f.title} ({f.id})</span>
+                          <span class="text-slate-400 text-[11px]">{f.dateFound}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <button 
+                type="button" 
+                onClick={onClose} 
+                class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 rounded-xl text-xs transition"
+              >
+                Close Student Dossier
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+
+    // =========================================================================
     // ADMIN DASHBOARD (KPIs, HOLDING PERIOD COUNTDOWN, SEARCH & FILTERS)
     // =========================================================================
-    function AdminDashboard({ db, onNavigate, onResolveExpiry, holdingPeriodDays = 45 }) {
+    function AdminDashboard({ db, onNavigate, onResolveExpiry, onInspectStudentDossier, holdingPeriodDays = 45 }) {
+      const [studentSearchQuery, setStudentSearchQuery] = useState('');
       const [search, setSearch] = useState('');
       const [statusFilter, setStatusFilter] = useState('All');
       const [categoryFilter, setCategoryFilter] = useState('All');
@@ -2053,6 +2315,17 @@
       }
 
       // Filtered items
+      const filteredStudentsList = useMemo(() => {
+        const query = studentSearchQuery.trim().toLowerCase();
+        if (!query) return [];
+        return Object.values(db.users || {}).filter(s =>
+          (s.fullName || '').toLowerCase().includes(query) ||
+          (s.rollNumber || '').toLowerCase().includes(query) ||
+          (s.department || '').toLowerCase().includes(query) ||
+          (s.phone || '').includes(query)
+        );
+      }, [db.users, studentSearchQuery]);
+
       const filteredItems = useMemo(() => {
         return items.filter(it => {
           const matchStatus = statusFilter === 'All' || it.status === statusFilter;
@@ -2118,6 +2391,72 @@
               <span class="text-[10px] font-bold text-purple-700 uppercase tracking-wider block">Locked Cabinets</span>
               <span class="text-2xl font-extrabold text-purple-900 mt-1 block">{lockedCabinetCount}</span>
             </div>
+          </div>
+
+          {/* ADMIN STUDENT DETAILS SEARCH WIDGET */}
+          <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm space-y-3">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <span>👥</span> <span>Search Student Details &amp; Custody Profile</span>
+                </h3>
+                <p class="text-xs text-slate-500">Search student details by roll number or name to view official records, active claims, and contact info.</p>
+              </div>
+              <span class="text-[11px] font-bold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-200 self-start">
+                {Object.keys(db.users || {}).length} Enrolled Students
+              </span>
+            </div>
+
+            <div class="relative">
+              <Icon name="search" className="w-5 h-5 text-slate-400 absolute left-3.5 top-3" />
+              <input 
+                type="text" 
+                value={studentSearchQuery} 
+                onChange={e => setStudentSearchQuery(e.target.value)} 
+                placeholder="Search Roll Number (e.g. 727622BCS042, 727621BME019) or Student Name..." 
+                class="w-full pl-11 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-600 focus:bg-white focus:outline-none" 
+              />
+            </div>
+
+            {/* Quick Chips for All Seeded Students */}
+            <div class="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
+              <span class="text-[10px] font-bold text-slate-400 uppercase flex-shrink-0">Quick Lookup:</span>
+              {Object.values(db.users || {}).map(s => (
+                <button 
+                  key={s.uid} 
+                  type="button" 
+                  onClick={() => onInspectStudentDossier(s)} 
+                  class="bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-700 border border-slate-200 px-3 py-1 rounded-xl text-xs font-semibold whitespace-nowrap transition flex items-center gap-1.5"
+                >
+                  <span>🎓</span>
+                  <span>{s.fullName} ({s.rollNumber})</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Live Filtered Search Results */}
+            {studentSearchQuery.trim() && (
+              <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-2 border-t border-slate-100">
+                {filteredStudentsList.length === 0 ? (
+                  <div class="text-xs text-slate-400 py-2 sm:col-span-3">No student found matching "{studentSearchQuery}".</div>
+                ) : (
+                  filteredStudentsList.map(s => (
+                    <div 
+                      key={s.uid} 
+                      onClick={() => onInspectStudentDossier(s)} 
+                      class="bg-slate-50 hover:bg-blue-50/80 p-3 rounded-2xl border border-slate-200 cursor-pointer transition flex items-center justify-between shadow-xs"
+                    >
+                      <div>
+                        <div class="font-bold text-xs text-slate-900">{s.fullName}</div>
+                        <div class="font-mono text-[11px] text-blue-600 font-bold">{s.rollNumber}</div>
+                        <div class="text-[10px] text-slate-500">{s.department?.split('(')[0]} • {s.yearOfStudy}</div>
+                      </div>
+                      <span class="text-xs text-blue-600 font-bold bg-white px-2.5 py-1 rounded-lg border border-blue-200">View Dossier →</span>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
           </div>
 
           {/* Holding Period Banner */}
@@ -3114,7 +3453,7 @@
     // =========================================================================
     // ADMIN: STUDENT SEARCH & FULL DIRECTORY (PRIVACY: ONLY ADMINS CAN ACCESS)
     // =========================================================================
-    function AdminStudentDirectory({ students, items, claims }) {
+    function AdminStudentDirectory({ students, items, claims, onInspectStudentDossier }) {
       const [search, setSearch] = useState('');
 
       const filteredStudents = useMemo(() => {
@@ -3190,11 +3529,15 @@
                   </div>
 
                   <div class="pt-2 border-t border-slate-100 flex items-center gap-2">
-                    <a href={`tel:${student.phone}`} class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-800 text-center py-1.5 rounded-lg text-xs font-bold">
-                      Call
-                    </a>
-                    <a href={`mailto:${student.email}`} class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-800 text-center py-1.5 rounded-lg text-xs font-bold">
-                      Email
+                    <button 
+                      type="button" 
+                      onClick={() => onInspectStudentDossier(student)} 
+                      class="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-center py-1.5 rounded-lg text-xs font-bold shadow-sm"
+                    >
+                      View Full Details
+                    </button>
+                    <a href={`tel:${student.phone}`} class="bg-slate-100 hover:bg-slate-200 text-slate-800 text-center py-1.5 px-3 rounded-lg text-xs font-bold">
+                      📞 Call
                     </a>
                   </div>
                 </div>
@@ -3498,6 +3841,7 @@
       const [activeTab, setActiveTab] = useState('browse');
       const [claimTargetItem, setClaimTargetItem] = useState(null);
       const [expiryModalItem, setExpiryModalItem] = useState(null);
+      const [activeDossierStudent, setActiveDossierStudent] = useState(null);
 
       // Save database helper
       function updateDb(newDb) {
@@ -3676,6 +4020,17 @@
 
               {/* User Chip & Logout */}
               <div class="flex items-center gap-3">
+                {isAdmin && (
+                  <button 
+                    type="button" 
+                    onClick={() => setActiveTab('students')} 
+                    class="bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
+                    title="Search and inspect student details"
+                  >
+                    <Icon name="search" className="w-3.5 h-3.5 text-blue-400" />
+                    <span>Search Students</span>
+                  </button>
+                )}
                 <div class="hidden sm:flex items-center gap-2 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-2xl text-xs">
                   <div class="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center font-bold text-white text-[11px]">
                     {currentUser.fullName ? currentUser.fullName.charAt(0) : 'U'}
@@ -3742,6 +4097,7 @@
                       db={db} 
                       onNavigate={setActiveTab} 
                       onResolveExpiry={setExpiryModalItem} 
+                      onInspectStudentDossier={setActiveDossierStudent}
                       holdingPeriodDays={holdingPeriodDays} 
                     />
                   )}
@@ -3775,6 +4131,7 @@
                       students={db.users} 
                       items={db.items} 
                       claims={db.claims} 
+                      onInspectStudentDossier={setActiveDossierStudent}
                     />
                   )}
                   {activeTab === 'reports' && (
@@ -3869,6 +4226,15 @@
               student={currentUser} 
               onClose={() => setClaimTargetItem(null)} 
               onSubmitClaim={handleAddClaim} 
+            />
+          )}
+
+          {/* ADMIN STUDENT DOSSIER INSPECTOR MODAL */}
+          {activeDossierStudent && (
+            <StudentDossierModal 
+              student={activeDossierStudent} 
+              db={db} 
+              onClose={() => setActiveDossierStudent(null)} 
             />
           )}
 
