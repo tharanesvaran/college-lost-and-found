@@ -47,6 +47,10 @@
   <!-- Chart.js CDN for Visual Reports -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+  <!-- QR Code Generator (Local offline fallback + CDN) -->
+  <script src="src/qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
   <!-- React 18 & ReactDOM 18 -->
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -540,7 +544,11 @@
         calendar: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />,
         fileText: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />,
         layers: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />,
-        externalLink: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+        externalLink: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />,
+        qrcode: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />,
+        share: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />,
+        copy: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />,
+        printer: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4H7v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
       };
       return (
         <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" {...props}>
@@ -1080,7 +1088,7 @@
     // =========================================================================
     // LOGIN COMPONENT (GOOGLE SIGN-IN ONLY, DUAL ROLES, ADMIN ALLOWLIST CHECK)
     // =========================================================================
-    function LoginScreen({ onLoginSuccess, db }) {
+    function LoginScreen({ onLoginSuccess, db, onOpenShareModal }) {
       const [isAdminMode, setIsAdminMode] = useState(false);
       const [adminUsername, setAdminUsername] = useState('');
       const [authError, setAuthError] = useState('');
@@ -1253,6 +1261,28 @@
 
               <div class="mt-4 text-center">
                 <span class="text-[11px] text-slate-400">Strict Institutional Access • No Password Login</span>
+              </div>
+
+              {/* QR Code Quick Access & Mobile Sharing Banner */}
+              <div class="mt-4 p-3 bg-gradient-to-r from-slate-900 to-mcet-navy border border-slate-800 rounded-2xl flex items-center justify-between text-white shadow-sm">
+                <div class="flex items-center gap-2.5 text-left">
+                  <div class="w-8 h-8 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center font-black shrink-0">
+                    <Icon name="qrcode" className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div class="text-[11px] font-bold text-white leading-tight">Access on Smartphone</div>
+                    <div class="text-[10px] text-slate-300">Scan QR to open portal or share</div>
+                  </div>
+                </div>
+                {onOpenShareModal && (
+                  <button 
+                    type="button" 
+                    onClick={onOpenShareModal}
+                    class="bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold px-3 py-1.5 rounded-xl text-xs transition flex items-center gap-1 shadow-sm active:scale-95"
+                  >
+                    <span>Show QR</span>
+                  </button>
+                )}
               </div>
 
               {/* Fast 1-Click Preset Testers for Demo & Evaluation */}
@@ -2055,7 +2085,7 @@
     // =========================================================================
     // STUDENT: PROFILE VIEW (PRIVACY RULE: STUDENTS SEE ONLY THEIR OWN PROFILE)
     // =========================================================================
-    function StudentProfileView({ student, onSignOut }) {
+    function StudentProfileView({ student, onSignOut, onOpenShareModal }) {
       return (
         <div class="max-w-xl mx-auto space-y-6">
           <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
@@ -2100,6 +2130,17 @@
                   <strong>Privacy Rule Enforced:</strong> Only college administrators have authorization to search or view student records.
                 </span>
               </div>
+
+              {onOpenShareModal && (
+                <button 
+                  type="button" 
+                  onClick={onOpenShareModal} 
+                  class="w-full bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold py-3 px-4 rounded-xl transition text-xs flex items-center justify-center gap-2 shadow-sm active:scale-98"
+                >
+                  <Icon name="qrcode" className="w-4 h-4" />
+                  <span>Share Portal QR Code with Classmates</span>
+                </button>
+              )}
 
               <button 
                 type="button" 
@@ -2293,9 +2334,318 @@
 
 
     // =========================================================================
+    // SHARE PORTAL & CAMPUS QR CODE MODAL
+    // =========================================================================
+    function SharePortalModal({ isOpen, onClose, portalUrl = "https://tharanesvaran.github.io/college-lost-and-found/" }) {
+      if (!isOpen) return null;
+
+      const [copied, setCopied] = useState(false);
+      const [posterDownloading, setPosterDownloading] = useState(false);
+      const qrContainerRef = React.useRef(null);
+
+      // Auto-detect URL or use production GitHub Pages URL
+      const shareUrl = portalUrl || (window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1')
+        ? "https://tharanesvaran.github.io/college-lost-and-found/"
+        : window.location.href);
+
+      React.useEffect(() => {
+        const timer = setTimeout(() => {
+          if (qrContainerRef.current) {
+            qrContainerRef.current.innerHTML = "";
+            try {
+              if (typeof window.QRCode !== "undefined") {
+                new window.QRCode(qrContainerRef.current, {
+                  text: shareUrl,
+                  width: 200,
+                  height: 200,
+                  colorDark: "#0b1329",
+                  colorLight: "#ffffff",
+                  correctLevel: window.QRCode.CorrectLevel.H
+                });
+              } else {
+                const img = document.createElement("img");
+                img.src = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(shareUrl)}&color=0b1329`;
+                img.alt = "Portal QR Code";
+                img.className = "w-48 h-48 mx-auto rounded-xl shadow-inner border border-slate-200";
+                qrContainerRef.current.appendChild(img);
+              }
+            } catch (err) {
+              console.error("QR Code generation error:", err);
+              const img = document.createElement("img");
+              img.src = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(shareUrl)}&color=0b1329`;
+              img.className = "w-48 h-48 mx-auto rounded-xl shadow-inner border border-slate-200";
+              qrContainerRef.current.appendChild(img);
+            }
+          }
+        }, 80);
+
+        return () => clearTimeout(timer);
+      }, [shareUrl]);
+
+      function handleCopyLink() {
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(shareUrl);
+          } else {
+            const ta = document.createElement('textarea');
+            ta.value = shareUrl;
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+          }
+          setCopied(true);
+          playBeep('success');
+          setTimeout(() => setCopied(false), 2200);
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      async function handleNativeShare() {
+        if (navigator.share) {
+          try {
+            await navigator.share({
+              title: "MCET College Lost & Found Portal",
+              text: "Report or recover lost items at Dr. Mahalingam College of Engineering & Technology:",
+              url: shareUrl
+            });
+            playBeep('success');
+          } catch (e) {
+            if (e.name !== "AbortError") handleCopyLink();
+          }
+        } else {
+          handleCopyLink();
+        }
+      }
+
+      function handleDownloadPoster() {
+        setPosterDownloading(true);
+        playBeep('click');
+
+        const canvas = document.createElement("canvas");
+        canvas.width = 900;
+        canvas.height = 1240;
+        const ctx = canvas.getContext("2d");
+
+        // Rich Navy Background with Gold Accent Border
+        const grad = ctx.createLinearGradient(0, 0, 900, 1240);
+        grad.addColorStop(0, "#070c1a");
+        grad.addColorStop(0.3, "#0b1329");
+        grad.addColorStop(1, "#0f1c3d");
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, 900, 1240);
+
+        // Gold border
+        ctx.strokeStyle = "#f59e0b";
+        ctx.lineWidth = 12;
+        ctx.strokeRect(36, 36, 828, 1168);
+
+        // Header Institution Title
+        ctx.fillStyle = "#f59e0b";
+        ctx.font = "bold 26px 'Outfit', sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("DR. MAHALINGAM COLLEGE OF ENGINEERING & TECHNOLOGY", 450, 110);
+
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "900 44px 'Outfit', sans-serif";
+        ctx.fillText("COLLEGE LOST & FOUND SYSTEM", 450, 175);
+
+        ctx.fillStyle = "#94a3b8";
+        ctx.font = "600 20px 'Plus Jakarta Sans', sans-serif";
+        ctx.fillText("CAMPUS PROPERTY INTAKE & VERIFIED CLAIM NETWORK", 450, 215);
+
+        // Inner Card for QR Code
+        ctx.fillStyle = "#ffffff";
+        if (ctx.roundRect) {
+          ctx.beginPath();
+          ctx.roundRect(90, 260, 720, 740, 28);
+          ctx.fill();
+        } else {
+          ctx.fillRect(90, 260, 720, 740);
+        }
+
+        ctx.fillStyle = "#0f172a";
+        ctx.font = "bold 32px 'Outfit', sans-serif";
+        ctx.fillText("SCAN TO ACCESS OR REPORT ARTICLES", 450, 330);
+
+        ctx.fillStyle = "#64748b";
+        ctx.font = "500 18px 'Plus Jakarta Sans', sans-serif";
+        ctx.fillText("Open your smartphone camera (iPhone / Android) to scan", 450, 368);
+
+        const qrCanvas = qrContainerRef.current ? qrContainerRef.current.querySelector("canvas") : null;
+        const qrImg = qrContainerRef.current ? qrContainerRef.current.querySelector("img") : null;
+
+        function drawDetailsAndExport() {
+          ctx.fillStyle = "#1e40af";
+          ctx.font = "bold 22px 'JetBrains Mono', monospace";
+          ctx.textAlign = "center";
+          ctx.fillText("tharanesvaran.github.io/college-lost-and-found/", 450, 875);
+
+          ctx.fillStyle = "#475569";
+          ctx.font = "600 17px 'Plus Jakarta Sans', sans-serif";
+          ctx.fillText("Report Found Items • Track Claim Status • Interactive MCET Campus Map", 450, 915);
+
+          // Card bottom badge
+          ctx.fillStyle = "#f8fafc";
+          ctx.fillRect(90, 940, 720, 60);
+          ctx.fillStyle = "#0f172a";
+          ctx.font = "bold 17px 'Plus Jakarta Sans', sans-serif";
+          ctx.fillText("🔒 100% Institutional Google Sign-In • Permanent Custody Logs", 450, 976);
+
+          // Bottom Info on Poster
+          ctx.fillStyle = "#fbbf24";
+          ctx.font = "bold 24px 'Outfit', sans-serif";
+          ctx.fillText("Physical Handover Desk: MCET Main Academic Tower & Block B", 450, 1070);
+
+          ctx.fillStyle = "#94a3b8";
+          ctx.font = "500 19px 'Plus Jakarta Sans', sans-serif";
+          ctx.fillText("NH 83 Highway Entrance, Pollachi • Administrative Cell", 450, 1110);
+
+          ctx.fillStyle = "#64748b";
+          ctx.font = "600 15px 'Plus Jakarta Sans', sans-serif";
+          ctx.fillText("NOTICE: Valuables (phones, wallets, laptops) are locked in secured campus safes.", 450, 1150);
+
+          const link = document.createElement("a");
+          link.download = "MCET_Lost_And_Found_Campus_QR_Poster.png";
+          link.href = canvas.toDataURL("image/png");
+          link.click();
+          setPosterDownloading(false);
+          playBeep('success');
+        }
+
+        if (qrCanvas) {
+          ctx.drawImage(qrCanvas, 240, 420, 420, 420);
+          drawDetailsAndExport();
+        } else if (qrImg) {
+          const img = new Image();
+          img.crossOrigin = "anonymous";
+          img.onload = () => {
+            ctx.drawImage(img, 240, 420, 420, 420);
+            drawDetailsAndExport();
+          };
+          img.onerror = () => {
+            drawDetailsAndExport();
+          };
+          img.src = qrImg.src;
+        } else {
+          drawDetailsAndExport();
+        }
+      }
+
+      return (
+        <div class="fixed inset-0 z-[99999] bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+          <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-100 animate-in fade-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div class="bg-gradient-to-r from-slate-950 via-mcet-navy to-slate-900 p-5 text-white relative">
+              <button 
+                type="button" 
+                onClick={onClose}
+                class="absolute top-4 right-4 text-slate-400 hover:text-white bg-white/10 hover:bg-white/20 p-1.5 rounded-full transition"
+                title="Close"
+              >
+                <Icon name="xCircle" className="w-5 h-5" />
+              </button>
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-2xl bg-amber-400 text-slate-950 flex items-center justify-center font-black shadow-md">
+                  <Icon name="qrcode" className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 class="text-base font-heading font-extrabold text-white">Share College Portal</h3>
+                  <p class="text-[11px] text-amber-300">Scan or share access with students &amp; staff</p>
+                </div>
+              </div>
+            </div>
+
+            {/* QR Card Content */}
+            <div class="p-6 space-y-5 text-center">
+              <div class="bg-slate-50 border border-slate-200 rounded-3xl p-5 shadow-inner">
+                <div 
+                  ref={qrContainerRef} 
+                  class="flex items-center justify-center min-h-[200px]"
+                ></div>
+                <div class="mt-3">
+                  <div class="text-xs font-bold text-slate-800">Scan with Smartphone Camera</div>
+                  <div class="text-[10px] text-slate-500">Instant access to Report Lost, Found &amp; Campus Map</div>
+                </div>
+              </div>
+
+              {/* Link Input + Copy Button */}
+              <div>
+                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 text-left">
+                  Portal Web Address
+                </label>
+                <div class="flex items-center gap-2">
+                  <input 
+                    type="text" 
+                    readOnly 
+                    value={shareUrl} 
+                    class="w-full bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono text-slate-700 select-all focus:outline-none"
+                  />
+                  <button 
+                    type="button" 
+                    onClick={handleCopyLink}
+                    class={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shrink-0 ${
+                      copied 
+                        ? 'bg-emerald-600 text-white' 
+                        : 'bg-blue-600 hover:bg-blue-700 text-white'
+                    }`}
+                  >
+                    <Icon name={copied ? "checkCircle" : "copy"} className="w-3.5 h-3.5" />
+                    <span>{copied ? 'Copied!' : 'Copy'}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Actions Grid */}
+              <div class="grid grid-cols-2 gap-3 pt-2">
+                <button 
+                  type="button" 
+                  onClick={handleNativeShare}
+                  class="p-3 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-2xl font-bold text-xs transition flex items-center justify-center gap-2 border border-slate-200 active:scale-95"
+                >
+                  <Icon name="share" className="w-4 h-4 text-blue-600" />
+                  <span>Share Link</span>
+                </button>
+                <button 
+                  type="button" 
+                  onClick={handleDownloadPoster}
+                  disabled={posterDownloading}
+                  class="p-3 bg-amber-400 hover:bg-amber-300 text-slate-950 rounded-2xl font-extrabold text-xs transition flex items-center justify-center gap-2 shadow-sm active:scale-95 disabled:opacity-50"
+                >
+                  <Icon name="download" className="w-4 h-4" />
+                  <span>{posterDownloading ? 'Generating...' : 'Download Poster'}</span>
+                </button>
+              </div>
+
+              <div class="bg-amber-50 border border-amber-200 rounded-2xl p-3 text-left">
+                <div class="text-[11px] font-bold text-amber-900 flex items-center gap-1.5">
+                  <span>📌</span>
+                  <span>Campus Physical Posting Tip:</span>
+                </div>
+                <div class="text-[10px] text-amber-800 mt-0.5 leading-relaxed">
+                  Download the official poster and pin it at the <strong>MCET Canteen, Central Library, Hostels, and NH 83 Bus Stop</strong> so students can instantly scan and report items on the go.
+                </div>
+              </div>
+
+              <button 
+                type="button" 
+                onClick={onClose} 
+                class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-2.5 rounded-xl text-xs transition"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+
+    // =========================================================================
     // ADMIN DASHBOARD (KPIs, HOLDING PERIOD COUNTDOWN, SEARCH & FILTERS)
     // =========================================================================
-    function AdminDashboard({ db, onNavigate, onResolveExpiry, onInspectStudentDossier, holdingPeriodDays = 45 }) {
+    function AdminDashboard({ db, onNavigate, onResolveExpiry, onInspectStudentDossier, onOpenShareModal, holdingPeriodDays = 45 }) {
       const [studentSearchQuery, setStudentSearchQuery] = useState('');
       const [search, setSearch] = useState('');
       const [statusFilter, setStatusFilter] = useState('All');
@@ -2355,14 +2705,27 @@
               <h2 class="text-2xl font-heading font-extrabold text-slate-900">College Property Intake Dashboard</h2>
               <p class="text-xs text-slate-500">Central inventory custody, holding period countdown, and secure storage tracking.</p>
             </div>
-            <button 
-              type="button" 
-              onClick={() => onNavigate('intake')} 
-              class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded-xl shadow-md transition flex items-center gap-2 text-xs self-start"
-            >
-              <Icon name="plus" className="w-4 h-4" />
-              <span>Log Found Item (Single Intake Point)</span>
-            </button>
+            <div class="flex items-center gap-2 self-start flex-wrap">
+              {onOpenShareModal && (
+                <button 
+                  type="button" 
+                  onClick={onOpenShareModal} 
+                  class="bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold py-2.5 px-3.5 rounded-xl shadow-sm transition flex items-center gap-1.5 text-xs active:scale-95"
+                  title="Print campus notice board poster or share QR code"
+                >
+                  <Icon name="qrcode" className="w-4 h-4" />
+                  <span>Campus QR Poster</span>
+                </button>
+              )}
+              <button 
+                type="button" 
+                onClick={() => onNavigate('intake')} 
+                class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded-xl shadow-md transition flex items-center gap-2 text-xs"
+              >
+                <Icon name="plus" className="w-4 h-4" />
+                <span>Log Found Item (Single Intake Point)</span>
+              </button>
+            </div>
           </div>
 
           {/* KPI Stat Cards */}
@@ -3842,6 +4205,7 @@
       const [claimTargetItem, setClaimTargetItem] = useState(null);
       const [expiryModalItem, setExpiryModalItem] = useState(null);
       const [activeDossierStudent, setActiveDossierStudent] = useState(null);
+      const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
       // Save database helper
       function updateDb(newDb) {
@@ -3984,7 +4348,22 @@
 
       // If user not authenticated, show login page
       if (!currentUser) {
-        return <LoginScreen onLoginSuccess={handleLoginSuccess} db={db} />;
+        return (
+          <>
+            <LoginScreen 
+              onLoginSuccess={handleLoginSuccess} 
+              db={db} 
+              onOpenShareModal={() => setIsShareModalOpen(true)} 
+            />
+            {isShareModalOpen && (
+              <SharePortalModal 
+                isOpen={isShareModalOpen} 
+                onClose={() => setIsShareModalOpen(false)} 
+                portalUrl="https://tharanesvaran.github.io/college-lost-and-found/" 
+              />
+            )}
+          </>
+        );
       }
 
       // If first-time student, render Mandatory Profile Setup Modal
@@ -4018,8 +4397,17 @@
                 </div>
               </div>
 
-              {/* User Chip & Logout */}
-              <div class="flex items-center gap-3">
+              {/* User Chip & Actions */}
+              <div class="flex items-center gap-2 sm:gap-3">
+                <button 
+                  type="button" 
+                  onClick={() => setIsShareModalOpen(true)} 
+                  class="bg-amber-400/20 hover:bg-amber-400/30 text-amber-300 border border-amber-400/30 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm active:scale-95"
+                  title="Share Portal via QR Code or Link"
+                >
+                  <Icon name="qrcode" className="w-3.5 h-3.5 text-amber-400" />
+                  <span class="hidden sm:inline">QR Code</span>
+                </button>
                 {isAdmin && (
                   <button 
                     type="button" 
@@ -4098,6 +4486,7 @@
                       onNavigate={setActiveTab} 
                       onResolveExpiry={setExpiryModalItem} 
                       onInspectStudentDossier={setActiveDossierStudent}
+                      onOpenShareModal={() => setIsShareModalOpen(true)}
                       holdingPeriodDays={holdingPeriodDays} 
                     />
                   )}
@@ -4182,6 +4571,7 @@
                     <StudentProfileView 
                       student={currentUser} 
                       onSignOut={handleSignOut} 
+                      onOpenShareModal={() => setIsShareModalOpen(true)}
                     />
                   )}
                 </>
@@ -4292,6 +4682,13 @@
                 </button>
               </div>
             </div>
+          {/* SHARE PORTAL QR CODE MODAL */}
+          {isShareModalOpen && (
+            <SharePortalModal 
+              isOpen={isShareModalOpen} 
+              onClose={() => setIsShareModalOpen(false)} 
+              portalUrl="https://tharanesvaran.github.io/college-lost-and-found/" 
+            />
           )}
         </div>
       );
